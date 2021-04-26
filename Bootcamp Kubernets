@@ -1,0 +1,229 @@
+Bootcamp Kubernetes
+
+Aula 1:
+
+Parte I:
+
+- Criando o primeiro container:
+
+docker container run hello-world
+
+obs: sendo hello-world a imagem que eu quero usar (imagem: "classe" do container)
+obs: se não encontrar a imagem na máquina o docker fará o download do dockerHub (registry "repositório" oficial)
+obs: criou e executou o container
+obs: o container hello-world em particular executa e encerra, ele não fica executando na máquina.
+
+- Para listar os containers em execução na máquina:
+
+docker container ls
+
+- Para listar os containers existentes na máquina incluindo os que não estão em execução:
+
+docker container ls -a
+
+- Criando o seguindo container porém nomeando ele:
+
+docker container run --name meusegundocontainer hello-world
+
+- Criando um container interativo flag "i" mais o tty habilitado flag "t" = "-it" do ubuntu:
+
+docker container run -it ubuntu /bin/bash
+
+obs: para iniciar o container utilizando o bash acrescentamos o /bin/bash (onde vamos interagir)
+obs: posso utilizar este conteiner como o ubuntu inclusive instalando e desinstalando com o apt-get.
+
+- Deletando container que não iremos mais utilizar:
+
+docker container rm meusegundocontainer
+
+obs: passando o nome do container.
+
+ou:
+
+docker container rm 85b43d6226f6
+
+obs: passando o id do container.
+
+- Para listar os containers posso usar também:
+
+docker ps
+
+e:
+
+docker ps -a
+
+- Igualmente para criar podemos fazer:
+
+docker run hello-world
+
+- Criando container nginx
+
+docker container run nginx
+
+obs: como fica rodando ele retém o cursor
+
+- Criando container nginx mas liberando o cursor e rodando o nginx em segundo plano:
+
+docker container run -d nginx
+
+- Acessando o container nginx no modo interativo no bash:
+
+docker container exec -it 17c07403a35e /bin/bash
+
+obs: no modo interativo está ok, mas não consigo acessar de fora do container, por exemplo da minha máquina local não consigo acessar o serviço fornecido pelo container.
+obs: Para fazer isso temos que fazer um bind de porta.
+
+- Criando o container nginx em segundo plano e fazendo o bind de porta:
+
+docker container run -d -p 8080:80 nginx
+
+obs: porta onde será fornecida o recurso : porta do recurso dentro do container no exemplo: 8080:80
+obs: agora sim no brownser da máquina consigo acessar o recurso, no caso: localhost:8080/
+obs: não é permitido remover o container, como normalmente fazemos, com ele em execução.
+
+- Parando um container passando o id do container:
+
+docker container stop 17c07403a35e
+
+- Forçando a remoção de um container com ele em execução:
+
+docker container rm -f e7ce715e463f
+
+Parte II:
+
+- Criando imagem customizada para o container:
+
+1 - criar um Dockerfile:
+
+(exemplo no arquivo: kubernetes-bootcamp/Dockerfile)
+
+a) informamos a imagem base com o FROM
+b) executamos os comandos dos procedimentos com o RUN
+
+2 - Criamos a imagem com o Dockerfile que criamos passando o nome que queremos para a imagem e o diretório que queremos mandar a imagem.
+
+docker image build -t ubuntu-curl .
+
+obs: no caso como não precisamos de arquivos externos por exemplo um .jar manteremos na mesma pasta. Se precisássemos teríamos de ter todos os arquivos no mesmo lugar, na mesma pasta.
+
+obs:
+
+- Listando as imagens existentes na máquina:
+
+docker image ls
+
+3 - Criando o conteiner com a imagem que criamos:
+
+docker container run -it ubuntu-curl /bin/bash
+
+- Histórico de construção de imagem
+
+docker image history ubuntu-curl
+
+obs: no caso a imagem ubuntu-curl
+
+- Deletando uma imagem
+
+docker image rm ubuntu-curl
+
+4 - Mandando nossa imagem para o Docker Hub
+
+a) fazendo o login
+
+docker login
+
+b) criando a imagem no padrão dockeruser/servicename:version
+
+docker image build -t rodolfohok/ubuntu-curl:v1 . 
+
+c) fazendo o push para o hub
+
+docker push rodolfohok/ubuntu-curl:v1 
+
+d) criando a versao latest
+
+docker tag rodolfohok/ubuntu-curl:v1 rodolfohok/ubuntu-curl:latest
+
+e) mandando a versao latest para o docker hub
+
+docker push rodolfohok/ubuntu-curl:latest
+
+- Deletando as imagens de lixo utilizadas por outras imagens que já foram deletadas:
+
+docker image prune
+
+5 - Utilizando a imagem que subimos no hub
+
+docker container run -it rodolfohok/ubuntu-curl:v1 /bin/bash
+
+Parte III:
+
+- Criando um conteiner de uma aplicação (https://github.com/KubeDev/api-conversao)
+
+Opções do Dockerfile: arquivo opacoes-Dockerfile.png
+
+1 - fork da aplicação no github
+
+2 - clone da aplicação para a máquina
+
+3 - abrir a aplicação, no caso no vscode
+
+4 - criar o Dockerfile, no caso:
+
+a) nossa base será o node versão lts: FROM node:14.16.1-alpine3.13
+b) nosso WORKDIR a pasta será /app: WORKDIR /app
+c) copiamos o package-lock.json e o package.json para a pasta /app: COPY: package*.json ./
+d) rodamos a instalação do node: RUN npm install
+e) copiamos todos os outros arquivos para a imagem: COPY . .
+f) expomos a porta 8080 que a aplicação utiliza: EXPOSE 8080
+g) quando rodarmos o conteiner rodará o comando node index.js: CMD ["node","index.js"]  
+
+5 - criar o dockerignore se for o caso, no caso criamos para ignorar a pasta node_modules
+
+6 - criamos a imagem: docker image build -t rodolfohok/api-conversao:v1 .
+
+7 - fazemos o upload to docker hub: docker push rodolfohok/api-conversao:v1
+
+8 - criamos a imagem versao latest: docker tag rodolfohok/api-conversao:v1 rodolfohok/api-conversao:latest
+
+9 - fazemos o upload to latest: docker push rodolfohok/api-conversao:latest
+
+10 - criamos nosso container: docker container run -d -p 8080:8080 rodolfohok/api-conversao:v1
+
+11 - testamos nossa aplicação
+
+PARTE IV:
+
+- Colocando nossa aplicação na nuvem: (usaremos o Azure da Microsoft)
+
+1 - criar conta no azure
+
+2 - entrar no portalazure
+
+3 - All Services / Containers / App Services
+
+4 - Create app service
+
+5 - preencher os campos:
+
+a) resource group: kubernetes-bootcamp
+b) name: api-kubernetes-bootcamp
+c) publish: docker container
+e) operating system: linux
+f) region: central us
+g) sku and size: dev/test / 1gb 60min/day compute free
+h) next
+i) options: simgle container
+j) image source: docker hub
+k) access type: public
+l) image and tag: rodolfohok/api-conversao:v1
+m) review and create
+n) verifique
+o) create
+
+p) go to resource
+q) verifique a url da aplicação
+r) container settings: dar para escolher a imagem
+s) também tem os log na página
+t) aguardar a aplicação subir
+u) testar
