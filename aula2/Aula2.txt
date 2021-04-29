@@ -1,0 +1,328 @@
+Kubernetes BootCamp - Aula 2:
+
+Parte I:
+
+- Arquitetura kubernetes:
+
+São dois tipos de máquinas:
+
+1 - Kubernetes control plane: Gerência os nodes "Maestro" do kubernetes
+(obs: duas máquinas para alta disponibilidade: se um cair o outro assume)
+	a) Kube Api Server: interface de gerenciamento, comunicação.
+	b) ETCD: banco de dados chave valor (acessado somente pelo api server)
+	c) Kube Scheduler: Gerência onde cada processo será executado, qual node pode 
+			atender demanda.
+	d) Kube Controller Manager: Executa e gerência todos os controladores do kubernetes,
+			ele quem toma as decisões do kubernetes. ex: autenticações, autorizações e admissões. 
+
+2 - Kubernetes Node: Responsável pela execução dos containers das aplicações "Orquestra".
+	a) Kubelet: Inspeciona e executa os containers do node, e informa os estados ao kube api server.
+	b) Kube Proxy: Responsável pela comunicações de rede com o cluster.
+	c) Container Runtime interface: especificações para a execução dos containers.
+
+- Instalação kd3 linux base ubuntu: cria o cluster kubernetes local / dev 
+obs: não em produção que é recomendado utilizar serviços na nuvem.
+
+wget -q -O - https://raw.githubusercontent.com/rancher/k3d/main/install.sh | bash
+
+- Instalação do kubectl: faz a interface com o kubernetes
+
+snap install kubectl --classic
+kubectl version --client
+
+- Criando o primeiro cluster kubernetes:
+
+k3d cluster create meuprimeirocluster
+
+- Listar os nodes do cluster kubernetes:
+
+kubectl get nodes
+
+- Verificar a execução do container do kubernetes k3d:
+
+docker container ls
+obs: lista dois containers um é o nosso node do kubernetes o outro é o load balance.
+
+- Criando outro cluster sem o load balance já que só temos um nó (node):
+
+k3d cluster create meusegundocluster --no-lb
+
+verificando:
+kubectl get nodes
+docker container ls
+
+- Listar os clusters que criamos:
+
+k3d cluster list
+
+- Deletando os clusters:
+
+k3d cluster delete meuprimeirocluster
+
+k3d cluster delete meusegundocluster
+
+- Criando um cluster com 3 servers e 3 agents
+
+k3d cluster create meucluster --servers 3 --agents 3
+
+Parte II:
+
+- Kubernetes elementos para deploy:
+
+1 - Pod: é onde se executa os containers, pode ser um ou mais containers dentro 
+		do pod compartilhando mesmo ip e file system. Para configurar o pod usamos um
+		arquivo de manifesto yaml.
+
+	- para saber a apiVersion de algum recurso:
+
+	kubectl api-resources
+
+	- Criando o objeto pod dentro do cluster Kubernetes
+
+	kubectl create -f ./meupod.yaml
+
+	- Verificando / listando o objeto pod:
+
+	kubectl get pods
+
+	- Verificando com mais detalhes:
+
+	kubectl describe pod meupod
+
+	- Para acessar diretamente o pod da minha máquina local:
+
+	kubectl port-forward pod/meupod 8080:80
+
+	- Deletando o pod:
+
+	kubectl delete pod meupod
+
+	obs: construindo o pod desta maneira não temos resiliência nem escalabilidade.
+	Para isso temos o ReplicaSet
+
+	obs: Utilizamos label e selector dentro do kubernetes para referenciá-los.
+
+	- Criamos o meusegundopod.yaml com label
+
+	- Criando os dois pods:
+
+	kubectl create -f .\
+
+	- Utilizando a label para lista o pods
+
+	kubectl get pods -l app=nginx
+
+2 - ReplicaSet:
+
+	- Criamos o meureplicaset.yaml
+
+	- Aplicando a configuração do ReplicaSet:
+
+	kubectl apply -f ./meureplicaset.yaml
+
+	obs: o apply serve para criar ou atualizar
+
+	- Listando e Verificando o ReplicaSet:
+
+	kubectl get replicaset
+	
+	kubectl describe replicaset meureplicaset
+
+	kubectl get pods
+
+	- Verificando a resiliência e escalabilidade do ReplicaSet:
+
+	a) escalabilidade: inserimos o spec: replicas: 10
+
+		kubectl apply -f ./meureplicaset.yaml
+
+		kubectl get pods
+		temos as 10 replicas.
+
+	b) resiliência:
+
+		kubectl delete pod meureplicaset-7b75p
+		quando deletamos um pod é criado um novo no lugar.
+
+	- Podemos escalar também por comando:
+
+	kubectl scale replicaset meureplicaset --replicas 5
+
+	kubectl get pods
+
+- testando atualizações:
+
+	- mudamos a versão da imagem de blue para green
+
+	kubectl apply -f ./meureplicaset.yaml
+
+	kubectl get replicaset
+	kubectl describe replicaset meureplicaset
+	kubectl describe pod meureplicaset-4dck2
+	
+	obs: A imagem do pod é blue ainda.
+
+	então:
+	kubectl delete pod meureplicaset-5sfj7
+	- o novo
+	kubectl port-forward pod/meureplicaset-8wnfp 8080:80
+	obs: este é verde
+	- um dos outros
+	kubectl port-forward pod/meureplicaset-tm98q 8080:80
+	obs: este é azul
+
+	e agora?
+
+	Para isso temos o Deployment
+
+3 - Deployment: faz a troca de versão automatizada, na atualização ele mantém o antigo
+			em stand-by e sobe o novo, podendo assim ser revertida rapidamente e também re-
+			-aplicada a atualização rapidamente. 
+
+	- deletando o replicaset sem Deployment
+
+	kubectl delete -f ./meureplicaset.yaml
+	kubectl get replicaset
+
+	- criamos o arquivo meudeployment.yaml renomeando o meureplicaset.yaml e apenas e mudando
+	o kind para Deployment e o name para meudeployment.
+
+	kubectl apply -f ./meudeployment.yaml
+
+	- verificando:
+
+	kubectl get deployment
+	kubectl get replicaset
+	kubectl get pods
+	kubectl describe deployment meudeployment
+
+	- testando:
+
+	a) resiliência
+		kubectl delete pod meudeployment-54f9646c6d-sq4pg
+		kubectl get pods
+		obs: ok recria pods excluídos;
+
+	b) escalabilidade: mudamos replicas no arquivo meudeployment.yaml
+		kubectl apply -f ./meudeployment.yaml
+		obs: a escalabilidade funcionando;
+
+	- para mais informações dos pods:
+
+	kubectl get pods -o wide
+
+	c) atualização: 
+		- mudamos a imagem dos pods para blue
+		kubectl apply -f ./meudeployment.yaml
+		kubectl get pods
+		obs: vai criando novos pod e terminando os antigos
+		kubectl describe pod meudeployment-6fbb766dc7-5k9lp
+		obs: ok um dos novos está usando a imagem nova
+		kubectl get replicaset
+		obs: temos dois replicaset um deles sem pods rodando;
+		- voltando a imagem dos pods para green
+		kubectl apply -f ./meudeployment.yaml
+		kubectl get replicaset
+		obs: são os mesmos replicaset porém temos pods rodando no antigo e nenhum no novo.
+
+		- fazendo o rollback da atualização:
+
+		kubectl rollout undo deployment meudeployment
+
+Parte III:
+
+- Expondo os pods para acesso externo: usamos um service para isso:
+
+obs: Tipos de services:
+	1) ClusterIP: somente interno ao cluster ex: podA(API) acessa podB(DataBase)
+	2) NodePort: para acesso externo usa o IP de qualquer máquina do cluster em uma 
+	porta aleatória entre 30000-32767. Muito utilizado em cluster on-premise.
+	3) LoadBalancer: para acesso externo utiliza um IP fornecido pelo serviço de cloud.
+
+- Criando um arquivo de manifesto para criar e configurar o service: service.yaml no caso.
+
+- Aplicando o service:
+
+kubectl apply -f ./service.yaml
+
+kubectl get services
+
+- Deletando o cluster para fazer o bind de portas:
+
+k3d cluster list
+k3d cluster delete meucluster
+
+- Criando o novo cluster:
+
+k3d cluster create --agents 3 --servers 2 -p "8080:30000@loadbalancer"
+
+- checando:
+
+docker container ls
+obs: ok tem o bind
+
+- Recriando o deployment e o service:
+
+kubectl apply -f ./meudeployment.yaml
+
+kubectl apply -f ./service.yaml
+
+kubectl get pods
+kubectl get services
+
+- podemos usar também:
+
+kubectl get all
+
+Parte IV: aplicação node.js + mongoDB (1h44m)
+
+1) Criar o Dockerfile na pasta scr do api-produto
+
+2) Criar a imagem:
+
+docker build -t rodolfohok/api-bootcamp-produto:v1 -f ./api-produto/src/Dockerfile ./api-produto/src/
+docker tag rodolfohok/api-bootcamp-produto:v1 rodolfohok/api-bootcamp-produto:latest
+
+3) Upload Docker Hub
+
+docker login
+docker push rodolfohok/api-bootcamp-produto:v1
+docker push rodolfohok/api-bootcamp-produto:latest
+
+4) Criar o arquivo manifesto de Deployment do mongodb
+
+5) Aplicar a criação e configuração do Deployment do mongodb
+
+kubectl apply -f ./api-produto/hioktec/mongodb/deployment.yaml
+kubectl get deployment
+kubectl get pods
+
+6) Criar o arquivo manifesto de serviço do mongodb
+
+7) Aplicar a criação e configuração do serviço do mongodb
+
+kubectl apply -f ./api-produto/hioktec/mongodb/service.yaml
+kubectl get services
+kubectl get all
+
+8) Criar o arquivo manifesto de Deployment e serviço da api
+
+9) Aplicar a criação e configuração do Deployment e service da api
+
+kubectl apply -f ./api-produto/hioktec/api/deployment.yaml
+kubectl get all
+
+10) testar a aplicação - postProdutos ok getProdutos ok
+
+	- modificando a versão da imagem
+	a) modificamos o swagger.yaml para nova versão 2.0.0
+	b) criar nova imagem:
+		docker image build -t rodolfohok/api-bootcamp-produto:v2 -f ./api-produto/src/Dockerfile ./api-produto/src/
+		docker tag rodolfohok/api-bootcamp-produto:v2 rodolfohok/api-bootcamp-produto:latest
+		docker push rodolfohok/api-bootcamp-produto:v2
+		docker push rodolfohok/api-bootcamp-produto:latest
+	c) mudar a image no manifesto  de deployment da api
+	d) reconfigurar o deployment da api:
+		kubectl apply -f ./api-produto/hioktec/api/deployment.yaml
+	- fazendo o roll back do deploy
+	kubectl rollout undo deployment api
