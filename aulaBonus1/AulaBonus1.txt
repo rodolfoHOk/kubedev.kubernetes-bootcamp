@@ -1,0 +1,44 @@
+Deployment avançado
+
+1) Saúde da Aplicação no Kubernets:
+  podemos utilizar um end-point da aplicação rest por exemplo para verificar a
+  saúde da aplicação (está funcionado bem) se retornar 200 está ok se 500 não está ok.
+
+- No manifesto dentro de container:
+  ex: no arquivo /k8s/api/deployment.yaml 
+  livenessProbe
+
+2) A aplicação está pronta para requisição:
+  idem podemos utilizar um outro end-point para verificar se ela está pronta.
+  ex: pode ser que a aplicação esteja rodando a criação de um recurso, tipo um
+    aprendizado da máquina do python.
+
+- No manifesto dentro de container:
+  ex: no arquivo /k8s/api/deployment.yaml
+  readinessProbe
+
+3) Informando os recursos requeridos e os limites de recursos do container:
+
+- No manifesto dentro de container:
+  ex: no arquivo /k8s/api/deployment.yaml
+  resources:
+    request:
+      ...
+    limits:
+      ...
+
+- Comando do Kubernets para verificar os recursos utilizados pelos pods:
+obs: requer a instalação do metrics-server do Kubernets.
+
+kubectl top pods
+
+4) Criar mais pods conforme a necessidade (auto scaling)
+
+- No manifesto dentro de container:
+  ex: no arquivo /k8s/api/deployment.yaml
+  depois do ---
+  apiVersion: autoScaling/v1
+
+- Comando do Kubernets para verificar o HPA (HorizontalPodAutoScaler)
+
+kubectl get hpa
