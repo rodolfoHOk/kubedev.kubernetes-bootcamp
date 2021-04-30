@@ -1,1 +1,65 @@
-dia 30-04-2021
+PipeLine CI / CD - Continuos Integration / Continuos Delivery
+
+Integração contínua e Entrega contínua
+
+1) Criando o cluster na nuvem:
+- Criar uma conta na DigitalOcean
+- Fazer o Login
+- Menu Kubernetes
+- Criar serviço de Kubernetes (Cluster)
+- Selecionar a versão do Kubernetes: 1.20.2
+- Selecionar a região do DataCenter: New York
+- Escolher a capacidade do Cluster: 
+  node pool name: default
+  machine type: basic node
+  node plan: 6GB RAM usable (8GB total) / 4vCPU
+  number nodes: 3
+    add node pool
+  obs: posso definir mais nós de diferentes configurações.
+- Escolher nome: k8s-bootcamp
+- Create Cluster
+- Access cluster config file: Download config file
+- Substituir o arquivo .kube/config da pasta pessoal do usuário do Sistema Operacional
+  pelo arquivo baixado.
+- Testando:
+  kubectl get nodes
+
+2)
+- Testando a nossa api no ambiente da DigitalOcean:
+kubectl apply -f ./api-produto/k8s -R
+- Verificando:
+kubectl get all
+- Mudar no deployment da api service type para LoadBalancer
+kubectl get all
+obs: ok temos o external-ip: 167.1xx.xxx.xxx
+- No browser podemos acessar este 167.1xx.xxx.xxx/api-docs/
+  e testamos criando um produto e listando todos
+- Deletando para fazer pela PipeLine:
+kubectl delete -f ./api-produto/k8s/ -
+kubectl get all
+
+- Abrir o github no repositório api-produto a aba actions
+- Acessar set up a workflow yourself
+  name: CI-CD
+  # triggers
+  on:
+    push:
+      branches: [ master ]
+  # jobs
+  jobs:
+    CI:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+
+        # obs: no Marketplace: Build and push Docker images
+        - name:  Build and push Docker images
+        .
+        .
+        .
+  ver arquivo da no github ./github/workflows/main.yml
+
+  depois de feita as modificações:
+
+kubectl get all
+kubectl get pods
