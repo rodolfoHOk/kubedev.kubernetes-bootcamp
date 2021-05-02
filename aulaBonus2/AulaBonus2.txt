@@ -1,0 +1,113 @@
+Aula Bônus 2 - Observabilidade e Métricas:
+
+Grafana e Prometheus
+
+Observabilidade:
+  - Logs: registro de eventos (restrito ao microserviço)
+  - Tracing: rastreamento dos eventos de uma requisição 
+    (todos os eventos dos microserviços da requisição)
+  - Métricas: Medições normalmente numéricas ao longo do tempo.
+
+Métricas: 
+  - de Sistema: ex: quantidade de requisições, consumo de recursos, apis mais acessadas
+  - de Negócio: ex: usuários acessando a aplicação, boletos emitidos, compras
+  obs: ambas devem estar relacionadas, para serem analisádas em conjunto.
+  obs: Métricas não é log.
+
+Prometheus:
+  - monitoramento e geração de métricas open source com time series database.
+  - formado pelo server: 
+      Storage (armazenamento): TSDB
+      Retriveal (coleta dos dados):
+        Jobs que coletam as métricas:
+          configuramos os targets: são end-points da aplicação onde os dados serão buscados.
+        Exporters: 
+          usados para coleta de métricas de aplicações que não possuem end-points
+          ex: mySQL, Jenkins, SQL Server, ...
+        Push gateway:
+          para serviços de pequenas durações: os serviços depositam as informações este
+          elemento e o Prometheus busca os dados no elemento.
+        Service Discovery:
+          para buscar os dados em serviços criados dinâmicamente como no kubernetes
+      PromQL (visualização dos dados):
+        - WEB UI:
+          um terminal web html onde colocamos query para buscar as informações que queremos filtrar,
+          não ideal para visualização, mas tem integração com o Grafana por exemplo.
+        - Grafana:
+          é capaz de criar dashboards, gráficos com os dados do Prometheus.
+        - API:
+        -Alertas: Alert Manager:
+          disparam para Slack, Telegram, e-mail, etc...
+
+Instalação:
+
+para instalação usaremos o ->
+
+Helm: gerenciador de pacotes para o kubernetes (https://helm.sh)
+  - ver como instalar no site.
+  - possui um repositório: (https://artifacthub.io)
+    - ver como instalar o Prometheus com o helm: parecido com o apt-get do debian
+    helm repo add ... // adiciona o repositório
+    helm repo add ...
+    helm repo update // atualiza
+    helm repo list // lista os repositórios
+    helm search repo prometheus // busca/lista os charts do repositório
+    // escolhemos prometheus-community/prometheus
+    helm show values prometheus-community/prometheus // lista os values que precisaremos usar
+    // para jogar em um arquivo:
+    helm show values prometheus-community/prometheus > prometheus-values.yaml
+    // podemos alterar este yaml de acordo com o projeto
+    // temos um values.yaml no api-produto para usarmos de exemplo.
+    // helm install release_name prometheus-community/prometheus no caso:
+    helm install prometheus prometheus-community/prometheus --values ./prometheus-values.yaml
+    // verificando:
+    kubectl get pods // temos os pods do prometheus
+    kubectl get services // temos os serviços para acessar o server do prometheus pelo external IP.
+    // já podemos acessar pelo browser
+
+- Mudar o manifesto de deployment da aplicação para o prometheus coletar os dados:
+  no
+    template:
+      metadata:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /metrics
+          prometheus.io/port: "8080"
+
+- acessando pelo browser o prometheus:
+  // ok está coletando as métricas dos pods
+  // podemos filtrar pela query e instância do pod por exemplo
+
+Instalando o Grafana:
+
+obs: para log temos o loki por exemplo no repositório do helm (artifacthub.io)
+
+- verificando no artifacthub.io o grafana e como instalar:
+  helm repo add ...
+  helm repo update
+  helm repo list // ok temos o grafana
+  helm show values grafana/grafana > grafana-values.yaml
+  // também temos o values do grafana no api-produto
+  helm install grafaba grafana/grafana --values ./grafana-values.yaml
+  // verificando
+  kubectl get pods // ok temos o grafana rodando no cluster
+  kubectl get services // ok temos o external IP do grafana para acessar pelo browser
+
+no browser:
+  - entrar com o usuario e senha que setamos no arquivo values da instalação do grafana
+  - Configuration definimos o DataSources:
+    - selecionamos o Prometheus
+      - url: http://prometheus-server
+      save
+  - Criar dashboard:
+    podemos adicionar as query do prometheus
+    ou vamos importar: na pasta do projeto api-produto/Grafana/dashboard.json e fazer o upload
+    podemos importar também os dashboard da community pelo código número.
+  
+
+
+
+
+
+    
+
