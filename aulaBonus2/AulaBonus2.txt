@@ -103,11 +103,47 @@ no browser:
     podemos adicionar as query do prometheus
     ou vamos importar: na pasta do projeto api-produto/Grafana/dashboard.json e fazer o upload
     podemos importar também os dashboard da community pelo código número.
+  - Dashboard do Grafana: Cluster monitoring for kubernetes id: 10000
   
+---
+
+Outras Ferramentas:
+
+Jenkins: para CI/CD
+
+Jaeger: para Tracing
+
+Loki: para Logs
+
+Traefik: Http proxy reverso
+
+Ingress controller: para roteamento de tráfico inbound para serviços internos do cluster,
+  baseado em hostname da requisição. Ao invés de ter vários IPs um por serviço usamos o
+  ingress para roteamento assim teremos apenas um IP externo.
 
 
+Outros modos de deployment:
+
+StatefulSet
+
+DaemonSet
+
+Jobs
+
+CronJobs
 
 
+Gerenciamento da distribuição dos pods no cluster:
 
-    
+Node Selector
 
+Taint e Toleration
+
+Node Affinity
+
+Pod Affinity e Pod Antiaffinity
+
+
+Curso Kubedev.io:
+
+https://kubedev.io/estrutura-do-curso-kubedev/
